@@ -1,0 +1,172 @@
+package marketplace
+
+import (
+	"net/http"
+	"strconv"
+	"wallet-point/utils"
+
+	"github.com/gin-gonic/gin"
+)
+
+type MarketplaceHandler struct {
+	service *MarketplaceService
+}
+
+func NewMarketplaceHandler(service *MarketplaceService) *MarketplaceHandler {
+	return &MarketplaceHandler{service: service}
+}
+
+// GetAll handles getting all products
+// @Summary Get all products
+// @Description Get list of all products with pagination and filters (Admin)
+// @Tags Admin - Marketplace
+// @Security BearerAuth
+// @Produce json
+// @Param status query string false "Filter by status" Enums(active, inactive)
+// @Param page query int false "Page number" default(1)
+// @Param limit query int false "Items per page" default(20)
+// @Success 200 {object} utils.Response{data=ProductListResponse}
+// @Failure 401 {object} utils.Response
+// @Router /admin/products [get]
+func (h *MarketplaceHandler) GetAll(c *gin.Context) {
+	status := c.Query("status")
+	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
+	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	params := ProductListParams{
+		Status: status,
+		Page:   page,
+		Limit:  limit,
+	}
+
+	response, err := h.service.GetAllProducts(params)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve products", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Products retrieved successfully", response)
+}
+
+// Get ByID handles getting product by ID
+// @Summary Get product by ID
+// @Description Get product details by ID (Admin)
+// @Tags Admin - Marketplace
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} utils.Response{data=Product}
+// @Failure 404 {object} utils.Response
+// @Router /admin/products/{id} [get]
+func (h *MarketplaceHandler) GetByID(c *gin.Context) {
+	productID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid product ID", nil)
+		return
+	}
+
+	product, err := h.service.GetProductByID(uint(productID))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Product retrieved successfully", product)
+}
+
+// Create handles creating new product
+// @Summary Create product
+// @Description Create a new product (Admin only)
+// @Tags Admin - Marketplace
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param request body CreateProductRequest true "Product details"
+// @Success 201 {object} utils.Response{data=Product}
+// @Failure 400 {object} utils.Response
+// @Router /admin/products [post]
+func (h *MarketplaceHandler) Create(c *gin.Context) {
+	adminID := c.GetUint("user_id")
+
+	var req CreateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	product, err := h.service.CreateProduct(&req, adminID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusCreated, "Product created successfully", product)
+}
+
+// Update handles updating product
+// @Summary Update product
+// @Description Update product information (Admin only)
+// @Tags Admin - Marketplace
+// @Security BearerAuth
+// @Accept json
+// @Produce json
+// @Param id path int true "Product ID"
+// @Param request body UpdateProductRequest true "Update data"
+// @Success 200 {object} utils.Response{data=Product}
+// @Failure 400 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /admin/products/{id} [put]
+func (h *MarketplaceHandler) Update(c *gin.Context) {
+	productID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid product ID", nil)
+		return
+	}
+
+	var req UpdateProductRequest
+	if err := c.ShouldBindJSON(&req); err != nil {
+		utils.ValidationErrorResponse(c, err.Error())
+		return
+	}
+
+	product, err := h.service.UpdateProduct(uint(productID), &req)
+	if err != nil {
+		statusCode := http.StatusBadRequest
+		if err.Error() == "product not found" {
+			statusCode = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, statusCode, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Product updated successfully", product)
+}
+
+// Delete handles deleting product
+// @Summary Delete product
+// @Description Delete product (Admin only)
+// @Tags Admin - Marketplace
+// @Security BearerAuth
+// @Produce json
+// @Param id path int true "Product ID"
+// @Success 200 {object} utils.Response
+// @Failure 404 {object} utils.Response
+// @Router /admin/products/{id} [delete]
+func (h *MarketplaceHandler) Delete(c *gin.Context) {
+	productID, err := strconv.ParseUint(c.Param("id"), 10, 32)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid product ID", nil)
+		return
+	}
+
+	if err := h.service.DeleteProduct(uint(productID)); err != nil {
+		statusCode := http.StatusBadRequest
+		if err.Error() == "product not found" {
+			statusCode = http.StatusNotFound
+		}
+		utils.ErrorResponse(c, statusCode, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Product deleted successfully", nil)
+}

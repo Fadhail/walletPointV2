@@ -1,0 +1,4 @@
+const CONFIG = {
+    API_BASE_URL: 'http://localhost:8096/api/v1',
+    DEBUG: true
+};

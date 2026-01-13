@@ -1,0 +1,53 @@
+package marketplace
+
+import (
+	"time"
+)
+
+type Product struct {
+	ID          uint      `json:"id" gorm:"primaryKey"`
+	Name        string    `json:"name" gorm:"not null"`
+	Description string    `json:"description" gorm:"type:text"`
+	Price       int       `json:"price" gorm:"not null"`
+	Stock       int       `json:"stock" gorm:"default:0;not null"`
+	ImageURL    string    `json:"image_url" gorm:"size:500"`
+	Status      string    `json:"status" gorm:"type:enum('active','inactive');default:'active'"`
+	CreatedBy   uint      `json:"created_by" gorm:"not null"`
+	CreatedAt   time.Time `json:"created_at"`
+	UpdatedAt   time.Time `json:"updated_at"`
+}
+
+func (Product) TableName() string {
+	return "products"
+}
+
+type CreateProductRequest struct {
+	Name        string `json:"name" binding:"required"`
+	Description string `json:"description"`
+	Price       int    `json:"price" binding:"required,gt=0"`
+	Stock       int    `json:"stock" binding:"gte=0"`
+	ImageURL    string `json:"image_url"`
+}
+
+type UpdateProductRequest struct {
+	Name        string `json:"name,omitempty"`
+	Description string `json:"description,omitempty"`
+	Price       int    `json:"price,omitempty" binding:"omitempty,gt=0"`
+	Stock       int    `json:"stock,omitempty" binding:"omitempty,gte=0"`
+	ImageURL    string `json:"image_url,omitempty"`
+	Status      string `json:"status,omitempty" binding:"omitempty,oneof=active inactive"`
+}
+
+type ProductListParams struct {
+	Status string
+	Page   int
+	Limit  int
+}
+
+type ProductListResponse struct {
+	Products   []Product `json:"products"`
+	Total      int64     `json:"total"`
+	Page       int       `json:"page"`
+	Limit      int       `json:"limit"`
+	TotalPages int       `json:"total_pages"`
+}
