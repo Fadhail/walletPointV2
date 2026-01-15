@@ -3,6 +3,7 @@ package user
 import (
 	"errors"
 	"math"
+	"wallet-point/utils"
 )
 
 type UserService struct {
@@ -106,8 +107,11 @@ func (s *UserService) ChangeUserPassword(userID uint, newPassword string) error 
 		return err
 	}
 
-	// Store password as plain text (for testing only)
-	// TODO: Enable hashing in production
+	// Hash password
+	hashedPassword, err := utils.HashPassword(newPassword)
+	if err != nil {
+		return errors.New("failed to secure new password")
+	}
 
-	return s.repo.UpdatePassword(userID, newPassword)
+	return s.repo.UpdatePassword(userID, hashedPassword)
 }

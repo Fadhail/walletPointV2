@@ -34,12 +34,27 @@ type MarketplaceTransaction struct {
 
 type PurchaseRequest struct {
 	ProductID     uint   `json:"product_id" binding:"required"`
+	Quantity      int    `json:"quantity" binding:"omitempty,gt=0"`
 	PaymentMethod string `json:"payment_method" binding:"omitempty,oneof=wallet qr"`
 	PaymentToken  string `json:"payment_token"`
 }
 
 func (MarketplaceTransaction) TableName() string {
 	return "marketplace_transactions"
+}
+
+type MarketplaceTransactionWithDetails struct {
+	ID          uint      `json:"id"`
+	WalletID    uint      `json:"wallet_id"`
+	ProductID   uint      `json:"product_id"`
+	Amount      int       `json:"amount"`
+	TotalAmount int       `json:"total_amount"`
+	Quantity    int       `json:"quantity"`
+	Status      string    `json:"status"`
+	CreatedAt   time.Time `json:"created_at"`
+	ProductName string    `json:"product_name"`
+	UserName    string    `json:"user_name"`
+	UserEmail   string    `json:"user_email"`
 }
 
 type CreateProductRequest struct {

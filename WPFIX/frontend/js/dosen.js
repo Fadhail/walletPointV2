@@ -121,7 +121,11 @@ class DosenController {
                     </td>
                     <td class="text-right">
                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-                            <button class="btn-icon" style="background: #f1f5f9;" onclick="DosenController.showQuizModal(${q.id})" title="Edit Kuis">
+                            <button class="btn btn-sm" style="background: var(--primary); color: white; border-radius: 12px; font-size: 0.75rem; padding: 0.4rem 0.8rem;" 
+                                    onclick="DosenController.renderSubmissions('pending', ${q.id})" title="Lihat Pengiriman">
+                                📊 Hasil
+                            </button>
+                            <button class="btn-icon" style="background: #f1f5f9;" onclick="DosenController.showQuizModal(${q.id})" title="Sempurnakan Kuis">
                                 <span style="font-size: 0.9rem;">✏️</span>
                             </button>
                             <button class="btn-icon" style="background: rgba(239, 68, 68, 0.05); color: var(--error);" onclick="DosenController.deleteMission(${q.id})" title="Hapus Kuis">
@@ -470,6 +474,10 @@ class DosenController {
                     </td>
                     <td class="text-right">
                         <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
+                            <button class="btn btn-sm" style="background: var(--primary); color: white; border-radius: 12px; font-size: 0.75rem; padding: 0.4rem 0.8rem;" 
+                                    onclick="DosenController.renderSubmissions('pending', ${m.id})" title="Lihat Pengiriman">
+                                📊 Pengiriman
+                            </button>
                             <button class="btn-icon" style="background: #f1f5f9;" onclick="DosenController.showMissionModal(${m.id})" title="Sempurnakan Tugas">
                                 <span style="font-size: 0.9rem;">✏️</span>
                             </button>
@@ -605,7 +613,7 @@ class DosenController {
     // ==========================
     // MODULE: SUBMISSIONS
     // ==========================
-    static async renderSubmissions(statusFilter = 'pending') {
+    static async renderSubmissions(statusFilter = 'pending', missionId = null) {
         const content = document.getElementById('mainContent');
         content.innerHTML = `
             <div class="fade-in">
@@ -616,12 +624,12 @@ class DosenController {
 
                 <div class="tabs" style="margin-bottom: 1.5rem; display:flex; gap: 1rem; border-bottom: 2px solid var(--border);">
                     <button class="tab-btn ${statusFilter === 'pending' ? 'active' : ''}" 
-                            onclick="DosenController.renderSubmissions('pending')"
+                            onclick="DosenController.renderSubmissions('pending', ${missionId})"
                             style="padding: 0.8rem 1.5rem; background:none; border:none; border-bottom: 3px solid ${statusFilter === 'pending' ? 'var(--primary)' : 'transparent'}; font-weight: 600; color: ${statusFilter === 'pending' ? 'var(--primary)' : 'var(--text-muted)'}; cursor: pointer;">
                         ⏳ Menunggu Peninjauan
                     </button>
                     <button class="tab-btn ${statusFilter !== 'pending' ? 'active' : ''}" 
-                            onclick="DosenController.renderSubmissions('approved')"
+                            onclick="DosenController.renderSubmissions('approved', ${missionId})"
                             style="padding: 0.8rem 1.5rem; background:none; border:none; border-bottom: 3px solid ${statusFilter !== 'pending' ? 'var(--primary)' : 'transparent'}; font-weight: 600; color: ${statusFilter !== 'pending' ? 'var(--primary)' : 'var(--text-muted)'}; cursor: pointer;">
                         ✅ Riwayat / Ditinjau
                     </button>
@@ -660,6 +668,10 @@ class DosenController {
 
             const result = await API.getDosenSubmissions({ status: queryStatus, limit: 100 });
             let submissions = result.data.submissions || [];
+
+            if (missionId) {
+                submissions = submissions.filter(s => s.mission_id === missionId);
+            }
 
             // If tab is history, we might want to merge approved & rejected if backend doesn't support generic 'completed' status
             // Assuming for now simple filter.
@@ -708,7 +720,7 @@ class DosenController {
                         </span>
                         ${s.status !== 'pending' ? `<span style="font-weight: 700; margin-left: 0.5rem; color: var(--text-main);">${s.score}/100</span>` : ''}
                     </td>
-                    <td class="text-right">
+                            <td class="text-right">
                         ${s.status === 'pending'
                     ? `<button class="btn btn-primary" onclick="DosenController.showReviewModal(${s.id})" style="padding: 0.4rem 1.2rem; font-size: 0.85rem; border-radius: 20px;">Tinjau Sekarang</button>`
                     : `<button class="btn" onclick="DosenController.showReviewModal(${s.id})" style="padding: 0.4rem 1.2rem; font-size: 0.85rem; background: #f1f5f9; color: var(--text-muted);">Lihat Detail</button>`
@@ -724,62 +736,121 @@ class DosenController {
 
     static async showReviewModal(id) {
         try {
-            const res = await API.getDosenSubmissions();
-            const submission = res.data.submissions.find(s => s.id === id);
+            const resSub = await API.getDosenSubmissions();
+            const submission = resSub.data.submissions.find(s => s.id === id);
+
+            // Get Mission details for correct answers
+            const resMission = await API.getMissionByID(submission.mission_id);
+            const mission = resMission.data;
+
+            let artifactContent = '';
+            if (mission.type === 'quiz') {
+                let answers = [];
+                try {
+                    answers = JSON.parse(submission.content);
+                } catch (e) {
+                    console.error("Failed to parse quiz answers", e);
+                }
+
+                artifactContent = `
+                    <div style="background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; margin-bottom: 1rem;">
+                        <div style="padding: 1rem; background: #f8fafc; border-bottom: 1px solid #e2e8f0; font-weight: 700; color: var(--primary);">
+                            HASIL JAWABAN KUIS 💡
+                        </div>
+                        <div style="overflow-x: auto;">
+                            <table style="width: 100%; border-collapse: collapse;">
+                                <thead style="background: #f1f5f9;">
+                                    <tr>
+                                        <th style="padding: 1rem; text-align: left; font-size: 0.8rem; color: #64748b; width: 50%;">PERTANYAAN</th>
+                                        <th style="padding: 1rem; text-align: left; font-size: 0.8rem; color: #64748b;">JAWABAN SISWA</th>
+                                        <th style="padding: 1rem; text-align: left; font-size: 0.8rem; color: #64748b;">KUNCI</th>
+                                        <th style="padding: 1rem; text-align: center; font-size: 0.8rem; color: #64748b;">SKOR</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    ${(mission.questions || []).map(q => {
+                    const studentAns = answers.find(a => a.question_id === q.id)?.answer || '-';
+                    const isCorrect = studentAns === q.answer;
+                    return `
+                                            <tr style="border-bottom: 1px solid #f1f5f9;">
+                                                <td style="padding: 1rem; font-size: 0.85rem; color: #1e293b; font-weight: 500;">${q.question}</td>
+                                                <td style="padding: 1rem; font-size: 0.85rem; color: ${isCorrect ? 'var(--success)' : 'var(--error)'}; font-weight: 700;">${studentAns}</td>
+                                                <td style="padding: 1rem; font-size: 0.85rem; color: var(--primary); font-weight: 600;">${q.answer}</td>
+                                                <td style="padding: 1rem; text-align: center;">
+                                                    <span style="font-size: 1.1rem;">${isCorrect ? '✅' : '❌'}</span>
+                                                </td>
+                                            </tr>
+                                        `;
+                }).join('')}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                `;
+            } else {
+                artifactContent = `
+                    <div style="background: #f1f5f9; padding: 1.5rem; border-radius: 12px; font-family: 'Inter', sans-serif; font-size: 0.95rem; line-height: 1.6; color: #1e293b; white-space: pre-wrap; border: 1px solid #e2e8f0;">
+                        ${submission.content || 'Tidak ada konten teks yang disediakan.'}
+                    </div>
+                `;
+            }
 
             const modalHtml = `
                 <div class="modal-overlay" onclick="closeModal(event)">
-                    <div class="modal-card" style="max-width: 750px; border-radius: var(--radius-xl); overflow: hidden;">
+                    <div class="modal-card" style="max-width: 850px; border-radius: var(--radius-xl); overflow: hidden; display: flex; flex-direction: column; max-height: 90vh;">
                         <div class="modal-head" style="background: #0f172a; color: white; padding: 1.5rem 2rem;">
                             <div>
-                                <h3 style="margin:0;">Validasi Pekerjaan: ${submission.student_name}</h3>
-                                <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; opacity: 0.7;">${submission.mission_title}</p>
+                                <h3 style="margin:0;">Pemeriksaan Tugas: ${submission.student_name}</h3>
+                                <p style="margin: 0.2rem 0 0 0; font-size: 0.85rem; opacity: 0.7;">${submission.mission_title} (${mission.type.toUpperCase()})</p>
                             </div>
-                            <button class="btn-icon" onclick="closeModal()" style="color: white;">×</button>
+                            <button class="btn-icon" onclick="closeModal()" style="color: white; font-size: 1.5rem;">×</button>
                         </div>
-                        <div class="modal-body" style="padding: 2rem; background: #f8fafc;">
-                            <div class="card" style="margin-bottom: 2rem; padding: 1.5rem; background: white; border: 1px solid var(--border);">
-                                <label style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.05em; color: var(--text-muted); font-weight: 700; display: block; margin-bottom: 0.5rem;">Artefak Pengiriman</label>
-                                <div style="background: #f1f5f9; padding: 1rem; border-radius: 8px; font-family: 'Courier New', monospace; font-size: 0.95rem; line-height: 1.6; color: #1e293b; white-space: pre-wrap;">${submission.content || 'Tidak ada konten teks yang disediakan.'}</div>
-                                ${submission.file_url ? `
-                                    <div style="margin-top: 1rem;">
-                                        <a href="${submission.file_url}" target="_blank" class="btn" style="background: var(--primary); color: white; font-size: 0.85rem; width: 100%;">
-                                            Lihat Bukti Terlampir 📎
-                                        </a>
-                                    </div>
-                                ` : ''}
-                            </div>
+                        <div class="modal-body" style="padding: 2rem; background: #f8fafc; overflow-y: auto;">
+                            <label style="font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--text-muted); font-weight: 800; display: block; margin-bottom: 0.75rem;">ARTEFAK PENGIRIMAN SISWA</label>
+                            
+                            ${artifactContent}
 
-                            <form id="reviewForm" onsubmit="DosenController.handleReviewSubmit(event, ${id})">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
-                                    <div class="form-group">
-                                        <label style="font-weight: 600;">Skor Teknis (0-100)</label>
-                                        <input type="number" name="score" value="100" min="0" max="100" required style="border-radius: 10px;">
+                            ${submission.file_url ? `
+                                <div style="margin-top: 1rem;">
+                                    <a href="${CONFIG.API_BASE_URL.replace('/api/v1', '')}${submission.file_url}" target="_blank" class="btn" style="background: white; color: var(--primary); border: 1px solid var(--primary); font-size: 0.85rem; width: 100%; font-weight: 600; text-align: center; display: block; text-decoration: none;">
+                                        Lihat Dokumentasi Pendukung 🖇️
+                                    </a>
+                                </div>
+                            ` : ''}
+
+                            <div style="margin-top: 2rem; padding-top: 2rem; border-top: 2px dashed #e2e8f0;">
+                                <form id="reviewForm" onsubmit="DosenController.handleReviewSubmit(event, ${id})">
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem;">
+                                        <div class="form-group">
+                                            <label style="font-weight: 700; color: #1e293b;">Beri Skor Kelulusan (0-100)</label>
+                                            <input type="number" name="score" value="100" min="0" max="100" required style="border-radius: 12px; border: 2px solid #e2e8f0; padding: 0.8rem;">
+                                        </div>
+                                        <div class="form-group">
+                                            <label style="font-weight: 700; color: #1e293b;">Keputusan Validasi</label>
+                                            <select name="status" style="border-radius: 12px; border: 2px solid #e2e8f0; padding: 0.8rem; background: white;">
+                                                <option value="approved">✅ Lulus & Beri Reward Poin</option>
+                                                <option value="rejected">❌ Gagal / Perlu Perbaikan</option>
+                                            </select>
+                                        </div>
                                     </div>
                                     <div class="form-group">
-                                        <label style="font-weight: 600;">Keputusan</label>
-                                        <select name="status" style="border-radius: 10px;">
-                                            <option value="approved">✅ Setujui & Hadiahi</option>
-                                            <option value="rejected">❌ Tolak Pengiriman</option>
-                                        </select>
+                                        <label style="font-weight: 700; color: #1e293b;">Catatan Evaluasi / Feedback</label>
+                                        <textarea name="review_note" placeholder="Tuliskan alasan penilaian atau saran perbaikan..." style="min-height: 100px; border-radius: 12px; border: 2px solid #e2e8f0; padding: 1rem;"></textarea>
                                     </div>
-                                </div>
-                                <div class="form-group">
-                                    <label style="font-weight: 600;">Umpan Balik & Catatan Mentorship</label>
-                                    <textarea name="review_note" placeholder="Beritahu siswa bagaimana kinerja mereka..." style="min-height: 100px; border-radius: 10px;"></textarea>
-                                </div>
-                                <div class="form-actions" style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end;">
-                                    <button type="button" class="btn" onclick="closeModal()" style="background: transparent; color: var(--text-muted);">Batal</button>
-                                    <button type="submit" class="btn btn-primary" style="padding: 0.8rem 2.5rem; border-radius: 30px;">Selesaikan Peninjauan</button>
-                                </div>
-                            </form>
+                                    <div class="form-actions" style="margin-top: 1rem; display: flex; gap: 1rem; justify-content: flex-end;">
+                                        <button type="button" class="btn" onclick="closeModal()" style="background: transparent; color: var(--text-muted); font-weight: 600;">Kembali</button>
+                                        <button type="submit" class="btn btn-primary" style="padding: 1rem 3rem; border-radius: 15px; font-weight: 700; box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);">Submit Penilaian ✨</button>
+                                    </div>
+                                </form>
+                            </div>
                         </div>
                     </div>
                 </div>
             `;
             document.body.insertAdjacentHTML('beforeend', modalHtml);
         } catch (error) {
-            showToast("Kesalahan memuat detail", "error");
+            console.error(error);
+            showToast("Gagal memuat detail pemeriksaan", "error");
         }
     }
 
@@ -791,11 +862,76 @@ class DosenController {
 
         try {
             await API.reviewSubmission(id, data);
-            showToast(`Pengiriman ${data.status} berhasil`);
+            showToast("Ulasan berhasil dikirim ✨");
             closeModal();
             DosenController.renderSubmissions();
         } catch (error) {
             showToast(error.message, "error");
         }
     }
+
+    // ==========================
+    // MODULE: STUDENT MONITORING
+    // ==========================
+    static async renderStudents() {
+        const content = document.getElementById('mainContent');
+        content.innerHTML = `
+            <div class="fade-in">
+                <div class="table-header" style="margin-bottom: 2rem;">
+                    <h2 style="font-weight: 700; color: var(--text-main);">Pemantauan Mahasiswa</h2>
+                    <p style="color: var(--text-muted);">Pantau keaktifan dan saldo poin mahasiswa</p>
+                </div>
+
+                <div class="table-wrapper">
+                    <table class="premium-table" id="studentsTable">
+                        <thead>
+                            <tr>
+                                <th>Mahasiswa</th>
+                                <th>NIM/NIP</th>
+                                <th>Saldo Point</th>
+                                <th>Status</th>
+                                <th class="text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody><tr><td colspan="5" class="text-center">Mengumpulkan data mahasiswa...</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+
+        try {
+            const res = await API.getStudents({ role: 'mahasiswa' });
+            const students = res.data.users || [];
+            const tbody = document.querySelector('#studentsTable tbody');
+
+            if (students.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="5" class="text-center">Belum ada data mahasiswa.</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = students.map(s => `
+                <tr class="fade-in-item">
+                    <td>
+                        <div style="font-weight: 700; color: var(--text-main);">${s.full_name}</div>
+                        <small style="color: var(--text-muted);">${s.email}</small>
+                    </td>
+                    <td><code>${s.nim_nip}</code></td>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: 0.5rem; font-weight: 800; color: var(--primary);">
+                            💎 ${s.balance?.toLocaleString() || 0}
+                        </div>
+                    </td>
+                    <td>
+                        <span class="badge badge-success">${s.status}</span>
+                    </td>
+                    <td class="text-right">
+                        <small style="color: var(--text-muted);">Monitoring Saja</small>
+                    </td>
+                </tr>
+            `).join('');
+        } catch (e) {
+            showToast("Gagal memuat data mahasiswa", "error");
+        }
+    }
+
 }

@@ -14,11 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Update UI with User Info
         updateUserProfile(user);
 
-        // Render Navigation based on Role
+        // Initialize Navigation and View
         renderNavigation(user.role);
-
-        // Render Dashboard Content
-        renderDashboard(user);
+        handleNavigation('dashboard', user.role);
 
     } catch (error) {
         console.error('Dashboard Init Error:', error);
@@ -67,31 +65,33 @@ function renderNavigation(role) {
     const nav = document.getElementById('sidebarNav');
     let items = [];
 
-    // Common Items
-    items.push({ label: 'Ringkasan', href: '#dashboard', active: true });
-
     if (role === 'admin') {
         items.push(
-            { label: 'Pengguna', href: '#users' },
-            { label: 'Dompet', href: '#wallets' },
-            { label: 'Transaksi', href: '#transactions' },
-            { label: 'Transfer P2P', href: '#admin-transfers' },
-            { label: 'Marketplace', href: '#products' },
-            { label: 'Riwayat Penjualan', href: '#admin-sales' },
+            { label: 'Dashboard', href: '#dashboard', active: true },
+            { label: 'Data Pengguna', href: '#users' },
+            { label: 'Data Produk', href: '#products' },
             { label: 'Log Audit', href: '#audit-logs' }
         );
     } else if (role === 'dosen') {
         items.push(
+            { label: 'Dashboard', href: '#dashboard', active: true },
             { label: 'Buat Quis', href: '#quizzes' },
             { label: 'Buat Misi', href: '#missions' },
-            { label: 'Approval', href: '#submissions' }
+            { label: 'Approval', href: '#submissions' },
+            { label: 'Data Siswa', href: '#dosen-students' }
         );
     } else if (role === 'mahasiswa') {
         items.push(
+            { label: 'Dashboard', href: '#dashboard', active: true },
             { label: 'Misi', href: '#missions' },
             { label: 'MarketPlace', href: '#shop' },
             { label: 'Scan QR', href: '#transfer' },
             { label: 'Wallet', href: '#history' }
+        );
+    } else if (role === 'merchant') {
+        items.push(
+            { label: 'Dashboard', href: '#merchant-dashboard', active: true },
+            { label: 'Kasir Scan', href: '#merchant-scanner' }
         );
     }
 
@@ -131,34 +131,27 @@ function handleNavigation(target, role) {
             case 'users':
                 AdminController.renderUsers();
                 break;
-            case 'wallets':
-                AdminController.renderWallets();
-                break;
-            case 'transactions':
-                AdminController.renderTransactions();
-                break;
-            case 'admin-transfers':
-                AdminController.renderTransfers();
-                break;
             case 'products':
                 AdminController.renderProducts();
                 break;
-            case 'admin-sales':
-                AdminController.renderMarketplaceSales();
-                break;
             case 'audit-logs':
                 AdminController.renderAuditLogs();
+                break;
+            case 'dashboard':
+                AdminController.renderDashboard();
                 break;
             case 'profile':
                 ProfileController.renderProfile();
                 break;
             default:
-                renderDashboard({ role: 'admin' });
-                title.textContent = 'Ringkasan Admin';
-                AdminController.loadDashboardStats();
+                AdminController.renderDashboard();
+                title.textContent = 'Dashboard Administrator';
         }
     } else if (role === 'dosen') {
         switch (target) {
+            case 'dashboard':
+                renderDashboard({ role: 'dosen' });
+                break;
             case 'quizzes':
                 DosenController.renderQuizzes();
                 break;
@@ -167,6 +160,9 @@ function handleNavigation(target, role) {
                 break;
             case 'submissions':
                 DosenController.renderSubmissions();
+                break;
+            case 'dosen-students':
+                DosenController.renderStudents();
                 break;
             case 'profile':
                 ProfileController.renderProfile();
@@ -177,6 +173,9 @@ function handleNavigation(target, role) {
         }
     } else if (role === 'mahasiswa') {
         switch (target) {
+            case 'dashboard':
+                renderDashboard({ role: 'mahasiswa' });
+                break;
             case 'missions':
                 MahasiswaController.renderMissions();
                 break;
@@ -196,6 +195,18 @@ function handleNavigation(target, role) {
             default:
                 renderDashboard({ role: 'mahasiswa' });
                 title.textContent = 'Dashboard Mahasiswa';
+        }
+    } else if (role === 'merchant') {
+        switch (target) {
+            case 'merchant-scanner':
+                MerchantController.renderMerchantScanner();
+                break;
+            case 'profile':
+                ProfileController.renderProfile();
+                break;
+            default:
+                renderDashboard({ role: 'merchant' });
+                title.textContent = 'Dashboard Kasir';
         }
     }
 }
@@ -266,7 +277,7 @@ function renderDashboard(user) {
             </div>
         `;
         DosenController.loadDosenStats();
-    } else {
+    } else if (user.role === 'mahasiswa') {
         content.innerHTML = `
             <div class="stats-grid">
                 <div class="stat-card card-gradient-1">
@@ -295,6 +306,34 @@ function renderDashboard(user) {
         `;
         // Load student stats via API
         loadStudentStats();
+    } else if (user.role === 'merchant') {
+        content.innerHTML = `
+            <div class="stats-grid">
+                <div class="stat-card card-gradient-1">
+                    <span class="stat-label">Total Penjualan Hari Ini</span>
+                    <div class="stat-value" id="stats-merchant-sales">--</div>
+                    <div class="stat-trend" style="color:var(--primary)">Poin Terkumpul</div>
+                </div>
+                <div class="stat-card card-gradient-2">
+                    <span class="stat-label">Jumlah Transaksi</span>
+                    <div class="stat-value" id="stats-merchant-count">--</div>
+                    <div class="stat-trend" style="color:var(--secondary)">Sesi Berhasil</div>
+                </div>
+                 <div class="stat-card card-gradient-3">
+                    <span class="stat-label">Saldo Emerald (Kredit)</span>
+                    <div class="stat-value" id="stats-merchant-balance">--</div>
+                    <div class="stat-trend" style="color:var(--success)">Total Kredit Masuk</div>
+                </div>
+            </div>
+
+            <div class="card fade-in" style="margin-top: 2rem; padding: 2.5rem; text-align: center; background: white; border: 1px solid var(--primary-light); border-radius:30px;">
+                <div style="font-size: 3rem; margin-bottom: 1rem;">🏧</div>
+                <h2 style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Terminal Kasir WalletPoint</h2>
+                <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">Gunakan fitur "Kasir Scan" di bilah sisi untuk memproses pembayaran mahasiswa menggunakan QR Code mereka.</p>
+                <button class="btn btn-primary" style="margin-top: 1.5rem; border-radius: 20px; padding: 1rem 2rem;" onclick="handleNavigation('merchant-scanner', 'merchant')">Mulai Scan QR 📷</button>
+            </div>
+        `;
+        MerchantController.loadMerchantStats();
     }
 }
 
@@ -306,7 +345,7 @@ async function loadStudentStats() {
         const submissions = await API.getSubmissions({ status: 'approved' });
 
         document.getElementById('userBalance').textContent = wallet.data.balance.toLocaleString();
-        document.getElementById('stats-missions-done').textContent = (submissions.data.submissions || []).filter(s => s.user_id === user.id).length;
+        document.getElementById('stats-missions-done').textContent = (submissions.data.submissions || []).filter(s => s.student_id === user.id).length;
         document.getElementById('stats-active-missions').textContent = (missions.data.missions || []).length;
     } catch (e) { console.error(e); }
 }

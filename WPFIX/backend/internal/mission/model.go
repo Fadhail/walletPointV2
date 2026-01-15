@@ -94,9 +94,15 @@ type UpdateMissionRequest struct {
 }
 
 type SubmitMissionRequest struct {
-	MissionID uint   `json:"mission_id" binding:"required"`
-	Content   string `json:"content"`
-	FileURL   string `json:"file_url"`
+	MissionID uint               `json:"mission_id" binding:"required"`
+	Content   string             `json:"content"`
+	FileURL   string             `json:"file_url"`
+	Answers   []AnswerSubmission `json:"answers"`
+}
+
+type AnswerSubmission struct {
+	QuestionID uint   `json:"question_id"`
+	Answer     string `json:"answer"`
 }
 
 type ReviewSubmissionRequest struct {
@@ -149,4 +155,10 @@ type SubmissionListResponse struct {
 	Page        int                     `json:"page"`
 	Limit       int                     `json:"limit"`
 	TotalPages  int                     `json:"total_pages"`
+}
+
+type DosenStatsResponse struct {
+	TotalMissions  int64 `json:"total_missions"`
+	PendingReviews int64 `json:"pending_reviews"`
+	ValidatedTasks int64 `json:"validated_tasks"`
 }

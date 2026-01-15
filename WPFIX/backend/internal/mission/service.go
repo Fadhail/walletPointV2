@@ -1,6 +1,7 @@
 package mission
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"wallet-point/internal/wallet"
@@ -178,6 +179,11 @@ func (s *MissionService) SubmitMission(req *SubmitMissionRequest, studentID uint
 		Status:    "pending",
 	}
 
+	if len(req.Answers) > 0 {
+		answersBytes, _ := json.Marshal(req.Answers)
+		submission.Content = string(answersBytes)
+	}
+
 	if err := s.repo.CreateSubmission(submission); err != nil {
 		return nil, err
 	}
@@ -249,5 +255,35 @@ func (s *MissionService) GetAllSubmissions(params SubmissionListParams) (*Submis
 		Page:        params.Page,
 		Limit:       params.Limit,
 		TotalPages:  totalPages,
+	}, nil
+}
+
+func (s *MissionService) GetDosenStats(dosenID uint) (*DosenStatsResponse, error) {
+	var totalMissions int64
+	var pendingReviews int64
+	var validatedTasks int64
+
+	// Count missions created by dosen
+	if err := s.db.Model(&Mission{}).Where("creator_id = ?", dosenID).Count(&totalMissions).Error; err != nil {
+		return nil, err
+	}
+
+	// Count pending submissions for missions created by this dosen
+	if err := s.db.Table("mission_submissions").
+		Joins("JOIN missions ON missions.id = mission_submissions.mission_id").
+		Where("missions.creator_id = ? AND mission_submissions.status = ?", dosenID, "pending").
+		Count(&pendingReviews).Error; err != nil {
+		return nil, err
+	}
+
+	// Count validated submissions by this dosen
+	if err := s.db.Model(&MissionSubmission{}).Where("validated_by = ?", dosenID).Count(&validatedTasks).Error; err != nil {
+		return nil, err
+	}
+
+	return &DosenStatsResponse{
+		TotalMissions:  totalMissions,
+		PendingReviews: pendingReviews,
+		ValidatedTasks: validatedTasks,
 	}, nil
 }

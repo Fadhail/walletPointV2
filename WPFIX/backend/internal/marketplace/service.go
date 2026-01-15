@@ -177,7 +177,13 @@ func (s *MarketplaceService) PurchaseProduct(userID uint, req *PurchaseRequest) 
 		return nil, err
 	}
 
-	totalPrice := product.Price
+	// Default quantity to 1 if not provided
+	quantity := req.Quantity
+	if quantity <= 0 {
+		quantity = 1
+	}
+
+	totalPrice := product.Price * quantity
 	if totalPrice <= 0 {
 		totalPrice = 1 // Force at least 1 point to avoid DB constraint
 	}
@@ -189,13 +195,13 @@ func (s *MarketplaceService) PurchaseProduct(userID uint, req *PurchaseRequest) 
 	}
 
 	// 5. Debit Wallet
-	err = s.walletService.DebitWithTransaction(tx, userWallet.ID, totalPrice, "marketplace", fmt.Sprintf("Purchase: %s", product.Name))
+	err = s.walletService.DebitWithTransaction(tx, userWallet.ID, totalPrice, "marketplace", fmt.Sprintf("Purchase %d x %s", quantity, product.Name))
 	if err != nil {
 		return nil, err
 	}
 
 	// 6. Reduce Stock
-	err = s.repo.UpdateStock(tx, product.ID, -1)
+	err = s.repo.UpdateStock(tx, product.ID, -quantity)
 	if err != nil {
 		return nil, err
 	}
@@ -206,7 +212,7 @@ func (s *MarketplaceService) PurchaseProduct(userID uint, req *PurchaseRequest) 
 		ProductID:   product.ID,
 		Amount:      product.Price,
 		TotalAmount: totalPrice,
-		Quantity:    1,
+		Quantity:    quantity,
 		Status:      "success",
 	}
 
@@ -219,6 +225,6 @@ func (s *MarketplaceService) PurchaseProduct(userID uint, req *PurchaseRequest) 
 }
 
 // GetTransactions retrieves all marketplace transactions (Admin)
-func (s *MarketplaceService) GetTransactions(limit, offset int) ([]MarketplaceTransaction, int64, error) {
+func (s *MarketplaceService) GetTransactions(limit, offset int) ([]MarketplaceTransactionWithDetails, int64, error) {
 	return s.repo.GetAllTransactions(limit, offset)
 }

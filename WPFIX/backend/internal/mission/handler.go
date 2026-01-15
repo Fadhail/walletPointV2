@@ -52,6 +52,12 @@ func (h *MissionHandler) GetAllMissions(c *gin.Context) {
 		Limit:     limit,
 	}
 
+	// Security: Students should only see active missions by default
+	userRole := c.GetString("user_role")
+	if userRole == "mahasiswa" && params.Status == "" {
+		params.Status = "active"
+	}
+
 	response, err := h.service.GetAllMissions(params)
 	if err != nil {
 		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to retrieve missions", err.Error())
@@ -341,12 +347,19 @@ func (h *MissionHandler) GetAllSubmissions(c *gin.Context) {
 	missionID, _ := strconv.ParseUint(c.Query("mission_id"), 10, 32)
 	studentID, _ := strconv.ParseUint(c.Query("student_id"), 10, 32)
 
+	// Parse query params
 	params := SubmissionListParams{
 		MissionID: uint(missionID),
 		StudentID: uint(studentID),
 		Status:    c.Query("status"),
 		Page:      page,
 		Limit:     limit,
+	}
+
+	// Security: If requester is a student, only show their own submissions
+	userRole := c.GetString("user_role")
+	if userRole == "mahasiswa" {
+		params.StudentID = c.GetUint("user_id")
 	}
 
 	response, err := h.service.GetAllSubmissions(params)
@@ -400,4 +413,24 @@ func (h *MissionHandler) ReviewSubmission(c *gin.Context) {
 		IPAddress: c.ClientIP(),
 		UserAgent: c.Request.UserAgent(),
 	})
+}
+
+// GetDosenStats handles getting Dosen dashboard stats
+// @Summary Get Dosen stats
+// @Description Get statistics for Dosen dashboard
+// @Tags Dosen - Missions
+// @Security BearerAuth
+// @Produce json
+// @Success 200 {object} utils.Response{data=DosenStatsResponse}
+// @Router /dosen/stats [get]
+func (h *MissionHandler) GetDosenStats(c *gin.Context) {
+	dosenID := c.GetUint("user_id")
+
+	stats, err := h.service.GetDosenStats(dosenID)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Failed to get stats", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Stats retrieved successfully", stats)
 }

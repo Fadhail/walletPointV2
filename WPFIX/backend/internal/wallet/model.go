@@ -20,7 +20,7 @@ func (Wallet) TableName() string {
 type WalletTransaction struct {
 	ID          uint      `json:"id" gorm:"primaryKey"`
 	WalletID    uint      `json:"wallet_id" gorm:"not null"`
-	Type        string    `json:"type" gorm:"type:enum('mission','task','transfer_in','transfer_out','marketplace','external','adjustment','topup');not null"`
+	Type        string    `json:"type" gorm:"type:enum('mission','task','transfer_in','transfer_out','marketplace','marketplace_sale','external','adjustment','topup');not null"`
 	Amount      int       `json:"amount" gorm:"not null"`
 	Direction   string    `json:"direction" gorm:"type:enum('credit','debit');not null"`
 	ReferenceID *uint     `json:"reference_id"`
@@ -90,4 +90,13 @@ type TransactionListResponse struct {
 	Page         int                      `json:"page"`
 	Limit        int                      `json:"limit"`
 	TotalPages   int                      `json:"total_pages"`
+}
+
+type AdminStats struct {
+	TotalUsers        int64 `json:"total_users"`
+	ActiveUsers       int64 `json:"active_users"`
+	CirculationPoints int64 `json:"circulation_points"`
+	TodayTransactions int64 `json:"today_transactions"`
+	TodayCredits      int64 `json:"today_credits"`
+	TodayDebits       int64 `json:"today_debits"`
 }

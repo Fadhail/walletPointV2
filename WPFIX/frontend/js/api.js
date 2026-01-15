@@ -148,6 +148,25 @@ class API {
         return API.request('/admin/marketplace/transactions', 'GET', null, params);
     }
 
+    static async getAdminStats() {
+        return API.request('/admin/stats', 'GET');
+    }
+
+    // ========================================
+    // ADMIN: External Integration
+    // ========================================
+    static async getExternalSources() {
+        return API.request('/admin/external/sources', 'GET');
+    }
+
+    static async createExternalSource(data) {
+        return API.request('/admin/external/sources', 'POST', data);
+    }
+
+    static async getMerchantStats() {
+        return API.request('/merchant/stats', 'GET');
+    }
+
     // ========================================
     // MAHASISWA: Transfers
     // ========================================
@@ -190,6 +209,18 @@ class API {
         return API.request(`/dosen/submissions/${id}/review`, 'POST', data);
     }
 
+    static async getDosenStats() {
+        return API.request('/dosen/stats', 'GET');
+    }
+
+    static async getStudents(params = {}) {
+        return API.request('/dosen/students', 'GET', null, params);
+    }
+
+    static async rewardStudent(data) {
+        return API.request('/dosen/reward', 'POST', data);
+    }
+
     // ========================================
     // MAHASISWA & SHARED
     // ========================================
@@ -200,8 +231,9 @@ class API {
     }
 
     static async getMissionByID(id) {
-        // Only mahasiswa usually calls this for details to submit
-        return API.request(`/mahasiswa/missions/${id}`, 'GET');
+        const user = JSON.parse(localStorage.getItem('user'));
+        const prefix = user.role === 'dosen' ? '/dosen' : '/mahasiswa';
+        return API.request(`${prefix}/missions/${id}`, 'GET');
     }
 
     static async submitMissionSubmission(data) {
@@ -237,11 +269,15 @@ class API {
         return API.request('/mahasiswa/marketplace/purchase', 'POST', data);
     }
 
+    static async syncExternalPoints(data) {
+        return API.request('/mahasiswa/external/sync', 'POST', data);
+    }
+
     // Overload getProducts to handle roles if needed, or create specific
     // Admin uses getProducts (line 119) -> /admin/products
     // Mahasiswa uses renderShop -> needs /mahasiswa/marketplace/products
     // Let's modify the admin one or add getShopProducts
-    static async request(endpoint, method, body = null, params = {}) {
+    static async request(endpoint, method = 'GET', body = null, params = {}, isMultipart = false) {
         try {
             let url = `${CONFIG.API_BASE_URL}${endpoint}`;
             if (Object.keys(params).length > 0) {
@@ -249,6 +285,7 @@ class API {
                 url += `?${searchParams.toString()}`;
             }
 
+<<<<<<< HEAD
             const headers = API.getHeaders();
             let finalBody = body;
 
@@ -257,19 +294,45 @@ class API {
                 delete headers['Content-Type'];
             } else if (body) {
                 finalBody = JSON.stringify(body);
+=======
+            const token = localStorage.getItem('token');
+            const headers = token ? { 'Authorization': `Bearer ${token}` } : {};
+
+            if (!isMultipart) {
+                headers['Content-Type'] = 'application/json';
+>>>>>>> 5eaa6bcf2df53b6b698699aecad7ffb6861102f4
             }
 
             const options = {
                 method,
+<<<<<<< HEAD
                 headers,
             };
 
             if (finalBody) {
                 options.body = finalBody;
+=======
+                headers
+            };
+
+            if (body) {
+                options.body = isMultipart ? body : JSON.stringify(body);
+>>>>>>> 5eaa6bcf2df53b6b698699aecad7ffb6861102f4
             }
 
             const response = await fetch(url, options);
-            const data = await response.json();
+
+            // Safely parse JSON
+            let data = {};
+            const text = await response.text();
+            try {
+                if (text) data = JSON.parse(text);
+            } catch (e) {
+                console.warn("Failed to parse JSON response:", text.substring(0, 100));
+                if (!response.ok) {
+                    throw new Error(`Server Error (${response.status}): ${response.statusText}`);
+                }
+            }
 
             if (!response.ok) {
                 if (response.status === 401) {
