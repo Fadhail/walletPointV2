@@ -288,18 +288,24 @@ class MahasiswaController {
                                 <p style="margin: 0.5rem 0 0 0; color: var(--text-muted); font-size: 0.9rem;">${mission.description || 'Tidak ada instruksi khusus yang diberikan.'}</p>
                             </div>
 
-                            <form id="missionSubmitForm" onsubmit="MahasiswaController.handleMissionSubmission(event, ${id})">
+                            <form id="missionSubmitForm" onsubmit="MahasiswaController.handleMissionSubmission(event, ${mission.id})">
                                 <div class="form-group">
-                                    <label style="font-weight: 600;">Pengiriman Teks / Tautan</label>
-                                    <textarea name="submission_content" required placeholder="Ketik jawaban Anda, atau tempel tautan ke pekerjaan Anda (misalnya, GitHub, Cloud Drive)..." style="min-height: 150px; border-radius: 12px;"></textarea>
+                                    <label style="font-weight: 600;">Laporan / Jawaban Teks</label>
+                                    <textarea name="content" required placeholder="Jelaskan hasil pekerjaan Anda di sini..." style="min-height: 120px; border-radius: 12px; border: 1px solid var(--border); padding: 1rem;"></textarea>
                                 </div>
                                 <div class="form-group">
-                                    <label style="font-weight: 600;">Bukti File (URL Opsional)</label>
-                                    <input type="text" name="file_url" placeholder="https://tautan-file-anda.com" style="border-radius: 12px;">
+                                    <label style="font-weight: 600;">Unggah Bukti File (Opsional)</label>
+                                    <div style="border: 2px dashed var(--border); padding: 2rem; border-radius: 12px; text-align: center; background: #fafafa; position: relative; cursor: pointer;" 
+                                         onclick="this.querySelector('input').click()">
+                                        <input type="file" name="submission_file" style="display: none;" onchange="this.parentElement.querySelector('p').textContent = this.files[0].name; this.parentElement.style.borderColor = 'var(--primary)';">
+                                        <div style="font-size: 2rem; margin-bottom: 0.5rem;">📁</div>
+                                        <p style="margin: 0; color: var(--text-muted); font-size: 0.85rem;">Klik untuk memilih file atau seret ke sini</p>
+                                        <small style="color: #94a3b8; display: block; margin-top: 0.5rem;">Maksimal 10MB (PDF, JPG, PNG, dll)</small>
+                                    </div>
                                 </div>
-                                <div class="form-actions" style="margin-top: 2rem; display: flex; gap: 1rem;">
-                                    <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex:1">Batal</button>
-                                    <button type="submit" class="btn btn-primary" style="flex:2; border-radius: 12px;">Kirim Solusi 🛰️</button>
+                                <div class="form-actions" style="margin-top: 2.5rem; display: flex; gap: 1rem;">
+                                    <button type="button" class="btn btn-secondary" onclick="closeModal()" style="flex:1; border-radius: 12px;">Batal</button>
+                                    <button type="submit" class="btn btn-primary" style="flex:2; border-radius: 12px; font-weight: 700;">🚀 Kirim Sekarang</button>
                                 </div>
                             </form>
                         </div>
@@ -314,24 +320,45 @@ class MahasiswaController {
 
     static async handleMissionSubmission(e, missionId) {
         e.preventDefault();
-        const formData = new FormData(e.target);
-        const data = Object.fromEntries(formData.entries());
-        data.mission_id = missionId;
+        const form = e.target;
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const fileInput = form.querySelector('input[name="submission_file"]');
 
         try {
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = true;
-            btn.textContent = 'Mengirim...';
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Memproses...';
 
-            await API.submitMissionSubmission(data);
-            showToast("Misi berhasil dikirim! Hadiah menunggu peninjauan.");
+            let fileUrl = '';
+
+            // 1. If file selected, upload it first
+            if (fileInput && fileInput.files.length > 0) {
+                submitBtn.textContent = 'Mengunggah File...';
+                const fileFormData = new FormData();
+                fileFormData.append('file', fileInput.files[0]);
+
+                // Using axios/fetch or API helper for upload
+                const uploadRes = await API.request('/upload', 'POST', fileFormData, {}, true); // true for multipart
+                fileUrl = uploadRes.data.file_url;
+            }
+
+            // 2. Submit mission data
+            submitBtn.textContent = 'Mengirim Jawaban...';
+            const payload = {
+                mission_id: missionId,
+                content: form.querySelector('textarea[name="content"]').value,
+                file_url: fileUrl
+            };
+
+            await API.submitMissionSubmission(payload);
+
+            showToast("Misi berhasil dikirim! Silakan tunggu penilaian dosen. ✨", "success");
             closeModal();
             this.renderMissions();
         } catch (error) {
-            showToast(error.message, "error");
-            const btn = e.target.querySelector('button[type="submit"]');
-            btn.disabled = false;
-            btn.textContent = 'Kirim Solusi 🛰️';
+            console.error(error);
+            showToast(error.message || "Gagal mengirim misi", "error");
+            submitBtn.disabled = false;
+            submitBtn.textContent = '🚀 Kirim Sekarang';
         }
     }
 
@@ -725,9 +752,14 @@ class MahasiswaController {
         const content = document.getElementById('mainContent');
         content.innerHTML = `
             <div class="fade-in">
-                <div class="table-header" style="margin-bottom: 2rem;">
-                    <h2 style="font-weight: 700; color: var(--text-main);">Dompet Saya</h2>
-                    <p style="color: var(--text-muted);">Catatan kriptografi dari semua perolehan dan penukaran poin Anda</p>
+                <div class="table-header" style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <h2 style="font-weight: 700; color: var(--text-main);">Dompet Saya</h2>
+                        <p style="color: var(--text-muted);">Catatan kriptografi dari semua perolehan dan penukaran poin Anda</p>
+                    </div>
+                    <button class="btn btn-primary" onclick="MahasiswaController.syncExternalPoints()" style="padding: 0.8rem 1.5rem; border-radius: 12px; font-weight: 700; display: flex; align-items: center; gap: 0.5rem; background: linear-gradient(to right, #10b981, #3b82f6); border: none;">
+                        <span>🔄</span> Sinkronisasi Poin Luar
+                    </button>
                 </div>
 
                 <div class="table-wrapper">
@@ -818,8 +850,9 @@ class MahasiswaController {
                             <div class="form-group">
                                 <label style="font-weight: 600;">Penerima</label>
                                 <div style="position:relative;">
-                                    <input type="number" name="receiver_id" id="receiverIdInput" placeholder="Masukkan ID Siswa / NIM" required style="border-radius: 12px;">
-                                    <small style="display:block; margin-top:0.4rem; color:var(--text-muted);">Mengonfirmasi detail penerima setelah pemindaian...</small>
+                                    <input type="number" name="receiver_id" id="receiverIdInput" placeholder="Masukkan ID Siswa / NIM" required style="border-radius: 12px;" oninput="MahasiswaController.fetchReceiverName(this.value)">
+                                    <div id="receiverNameDisplay" style="margin-top:0.4rem; font-size:0.85rem; font-weight:600; color:var(--primary); min-height:1.2em;"></div>
+                                    <small style="display:block; margin-top:0.1rem; color:var(--text-muted);">Ketik ID atau pinda Kode QR di atas</small>
                                 </div>
                             </div>
 
@@ -1010,9 +1043,9 @@ class MahasiswaController {
             const input = document.getElementById('receiverIdInput');
             if (input) {
                 input.value = receiverId;
-                showToast(`Penerima terdeteksi: ID ${receiverId}`, "success");
+                showToast(`Penerima terdeteksi! Mengonfirmasi identitas...`, "success");
+                this.fetchReceiverName(receiverId);
             } else {
-                // If not on transfer page, maybe redirect or open transfer modal
                 showToast(`ID Pengguna terdeteksi: ${receiverId}. Gunakan di menu Transfer.`, "info");
             }
         }
@@ -1021,6 +1054,62 @@ class MahasiswaController {
         }
         else {
             showToast("Kode QR tidak dikenali", "warning");
+        }
+    }
+
+    static async fetchReceiverName(id) {
+        const display = document.getElementById('receiverNameDisplay');
+        if (!id || id.length < 1) {
+            display.textContent = '';
+            return;
+        }
+
+        try {
+            // Use debounce if needed, but for now simple fetch
+            display.textContent = '🔍 Mencari penerima...';
+            display.style.color = 'var(--text-muted)';
+
+            const res = await API.request(`/mahasiswa/transfer/recipient/${id}`, 'GET');
+            const user = res.data;
+
+            display.textContent = `✅ PENERIMA: ${user.full_name} (${user.role.toUpperCase()})`;
+            display.style.color = 'var(--success)';
+        } catch (e) {
+            display.textContent = '❌ Pengguna tidak ditemukan atau tidak aktif';
+            display.style.color = 'var(--error)';
+        }
+    }
+
+    static async syncExternalPoints() {
+        try {
+            const btn = document.querySelector('button[onclick*="syncExternalPoints"]');
+            if (btn) {
+                btn.disabled = true;
+                btn.innerHTML = '<span class="spinner"></span> Sinkronisasi...';
+            }
+
+            // We use the default source for now or specific if needed
+            // API payload for sync: { source_id: 1, external_user_id: "..." }
+            // But let's assume the backend automatically knows based on user mapping
+
+            await API.request('/mahasiswa/external/sync', 'POST', {
+                source_id: 1 // Default to first source for demo
+            });
+
+            showToast("Klaim poin eksternal berhasil! Saldo diperbarui.", "success");
+
+            // Reload views
+            this.renderLedger();
+            loadStudentStats();
+
+        } catch (e) {
+            showToast("Gagal sinkronisasi: " + e.message, "error");
+        } finally {
+            const btn = document.querySelector('button[onclick*="syncExternalPoints"]');
+            if (btn) {
+                btn.disabled = false;
+                btn.innerHTML = '<span>🔄</span> Sinkronisasi Poin Luar';
+            }
         }
     }
 
@@ -1039,7 +1128,7 @@ class MahasiswaController {
                         <div style="background: white; padding: 1.5rem; border: 1px solid var(--border); border-radius: 20px; box-shadow: var(--shadow-md); display: inline-block; margin-bottom: 2rem;">
                              <img id="myQrImg" src="data:image/png;base64,${qrImageBase64}" style="width: 250px; height: 250px; display: block;" alt="My Wallet QR">
                              <div style="margin-top: 1rem; background: var(--primary); color: white; padding: 0.5rem 1.5rem; border-radius: 30px; font-weight: 800; display: inline-block;">
-                                ID: ${user.id}
+                                 ID: ${user.id}
                              </div>
                         </div>
 
@@ -1077,18 +1166,7 @@ class MahasiswaController {
             const currentUser = JSON.parse(localStorage.getItem('user'));
 
             tbody.innerHTML = transfers.map(t => {
-                const isSender = t.sender_wallet_id === currentUser.wallet_id; // Using wallet_id logic might be strictly dependent on how API returns it. Simplified below.
-                const type = (t.description || '').includes(`Transfer from user ${currentUser.id}`) ? 'OUT' : 'IN'; // Fallback logic if IDs are tricky without full wallet objects
-
-                // Better logic: API should return enough info. 
-                // We'll trust the BE returns sender_wallet_id. We need our own wallet ID.
-                // For now, let's use the amount sign or description if possible. 
-                // BUT, since we just implemented the API, let's look at the response structure.
-
-                // Since our BE doesn't return IsSender flag directly, and we might not know our own wallet ID easily without an extra call.
-                // Let's assume description contains the clue as implemented in service.go
-
-                const isIncoming = t.description && t.description.includes(`Transfer from user`);
+                const isIncoming = t.description && (t.description.includes(`Transfer from user`) || t.receiver_wallet_id === currentUser.wallet_id);
 
                 return `
                 <tr>
@@ -1098,7 +1176,7 @@ class MahasiswaController {
                         </span>
                     </td>
                     <td>
-                         <div style="font-weight:600; color:var(--text-main);">User ID: ${isIncoming ? t.sender_wallet_id : t.receiver_wallet_id}</div> <!-- Simplified as we don't have joined user names yet -->
+                         <div style="font-weight:600; color:var(--text-main);">User Wallet ID: ${isIncoming ? t.sender_wallet_id : t.receiver_wallet_id}</div>
                          <small style="color:var(--text-muted);">${t.description}</small>
                     </td>
                     <td style="font-weight: 700; color: ${isIncoming ? 'var(--success)' : 'var(--error)'}">

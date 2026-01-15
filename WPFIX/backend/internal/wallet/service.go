@@ -398,6 +398,39 @@ func (s *WalletService) GetMerchantStats(userID uint) (*MerchantStats, error) {
 	return &stats, nil
 }
 
+func (s *WalletService) GetAdminStats() (*AdminStats, error) {
+	var stats AdminStats
+
+	// 1. User Stats
+	s.db.Table("users").Count(&stats.TotalUsers)
+	s.db.Table("users").Where("status = ?", "active").Count(&stats.ActiveUsers)
+
+	// 2. Circulation Points
+	s.db.Table("wallets").Select("COALESCE(SUM(balance), 0)").Scan(&stats.CirculationPoints)
+
+	// 3. Today Stats
+	location, err := time.LoadLocation("Asia/Jakarta")
+	if err != nil {
+		location = time.Local
+	}
+	now := time.Now().In(location)
+	startOfDay := time.Date(now.Year(), now.Month(), now.Day(), 0, 0, 0, 0, location)
+
+	s.db.Model(&WalletTransaction{}).Where("created_at >= ?", startOfDay).Count(&stats.TodayTransactions)
+
+	s.db.Model(&WalletTransaction{}).
+		Where("created_at >= ? AND direction = ?", startOfDay, "credit").
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&stats.TodayCredits)
+
+	s.db.Model(&WalletTransaction{}).
+		Where("created_at >= ? AND direction = ?", startOfDay, "debit").
+		Select("COALESCE(SUM(amount), 0)").
+		Scan(&stats.TodayDebits)
+
+	return &stats, nil
+}
+
 func (s *WalletService) GetMyQRCode(userID uint) (string, error) {
 	qrPayload := fmt.Sprintf("WPUSER:%d", userID)
 	png, err := qrcode.Encode(qrPayload, qrcode.Medium, 256)

@@ -133,6 +133,26 @@ func (s *Service) GetReceivedTransfers(userID uint, limit, offset int) ([]Transf
 	return s.repo.FindByReceiverWallet(userWallet.ID, limit, offset)
 }
 
+// RecipientSummary represents basic recipient info for UI verification
+type RecipientSummary struct {
+	ID       uint   `json:"id"`
+	FullName string `json:"full_name"`
+	Role     string `json:"role"`
+}
+
+// FindRecipient fetches basic info about a potential receiver
+func (s *Service) FindRecipient(userID uint) (*RecipientSummary, error) {
+	var recipient RecipientSummary
+	err := s.db.Table("users").Select("id, full_name, role").Where("id = ? AND status = 'active'", userID).Scan(&recipient).Error
+	if err != nil {
+		return nil, err
+	}
+	if recipient.ID == 0 {
+		return nil, errors.New("recipient not found or inactive")
+	}
+	return &recipient, nil
+}
+
 // GetAllTransfers retrieves all transfers (admin only)
 func (s *Service) GetAllTransfers(limit, offset int) ([]Transfer, int64, error) {
 	return s.repo.FindAll(limit, offset)

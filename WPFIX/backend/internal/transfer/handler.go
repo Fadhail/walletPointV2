@@ -1,8 +1,10 @@
 package transfer
 
 import (
+	"fmt"
 	"net/http"
 	"strconv"
+	"wallet-point/internal/audit"
 	"wallet-point/utils"
 
 	"github.com/gin-gonic/gin"
@@ -10,12 +12,13 @@ import (
 
 // Handler handles HTTP requests for transfers
 type Handler struct {
-	service *Service
+	service      *Service
+	auditService *audit.AuditService
 }
 
 // NewHandler creates a new transfer handler
-func NewHandler(service *Service) *Handler {
-	return &Handler{service: service}
+func NewHandler(service *Service, auditService *audit.AuditService) *Handler {
+	return &Handler{service: service, auditService: auditService}
 }
 
 // CreateTransfer handles POST /transfer
@@ -53,6 +56,17 @@ func (h *Handler) CreateTransfer(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "Transfer completed successfully", gin.H{
 		"transfer": transfer,
+	})
+
+	// Log activity
+	h.auditService.LogActivity(audit.CreateAuditParams{
+		UserID:    senderUserID.(uint),
+		Action:    "TRANSFER_POINTS",
+		Entity:    "TRANSFER",
+		EntityID:  transfer.ID,
+		Details:   fmt.Sprintf("Transferred %d points to user %d", req.Amount, req.ReceiverUserID),
+		IPAddress: c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
 	})
 }
 
@@ -176,4 +190,30 @@ func (h *Handler) GetAllTransfers(c *gin.Context) {
 		"limit":     limit,
 		"offset":    offset,
 	})
+}
+
+// GetRecipientInfo handles GET /transfer/recipient/:id
+// @Summary Get recipient info for verification
+// @Description Find recipient name and role by ID
+// @Tags Transfer
+// @Produce json
+// @Param id path int true "User ID"
+// @Success 200 {object} RecipientSummary
+// @Security BearerAuth
+// @Router /mahasiswa/transfer/recipient/{id} [get]
+func (h *Handler) GetRecipientInfo(c *gin.Context) {
+	idStr := c.Param("id")
+	id, err := strconv.ParseUint(idStr, 10, 32)
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusBadRequest, "Invalid ID format", nil)
+		return
+	}
+
+	recipient, err := h.service.FindRecipient(uint(id))
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusNotFound, err.Error(), nil)
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Recipient found", recipient)
 }

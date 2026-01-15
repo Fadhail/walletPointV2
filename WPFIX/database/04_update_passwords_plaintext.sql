@@ -2,7 +2,7 @@
 -- Update existing users to use plain text passwords
 -- For testing purposes only!
 -- ==================================================
-USE walletpoint_db;
+USE wallet_point;
 
 -- Update all existing users to use plain text password
 UPDATE users SET password_hash = 'Password123!' WHERE email = 'admin@campus.edu';

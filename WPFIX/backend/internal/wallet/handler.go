@@ -404,3 +404,14 @@ func (h *WalletHandler) GetMerchantStats(c *gin.Context) {
 
 	utils.SuccessResponse(c, http.StatusOK, "Merchant stats retrieved", stats)
 }
+
+// GetAdminStats handles retrieving administrative dashboard statistics
+func (h *WalletHandler) GetAdminStats(c *gin.Context) {
+	stats, err := h.service.GetAdminStats()
+	if err != nil {
+		utils.ErrorResponse(c, http.StatusInternalServerError, "Error fetching admin stats", err.Error())
+		return
+	}
+
+	utils.SuccessResponse(c, http.StatusOK, "Admin stats retrieved", stats)
+}

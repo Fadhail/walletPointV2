@@ -1,7 +1,7 @@
 -- ==================================================
 -- Part 2: Triggers & Stored Procedures
 -- ==================================================
-USE walletpoint_db;
+USE wallet_point;
 
 -- TRIGGERS
 DELIMITER $$

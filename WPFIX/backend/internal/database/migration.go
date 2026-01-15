@@ -21,6 +21,10 @@ func Migrate(db *gorm.DB) {
 	db.Exec("ALTER TABLE mission_submissions MODIFY COLUMN status ENUM('pending', 'approved', 'rejected') NOT NULL DEFAULT 'pending'")
 	db.Exec("ALTER TABLE wallet_transactions MODIFY COLUMN type ENUM('mission', 'task', 'transfer_in', 'transfer_out', 'marketplace', 'marketplace_sale', 'external', 'adjustment', 'topup') NOT NULL")
 
+	// Cleanup: Remove legacy tables
+	db.Exec("DROP TABLE IF EXISTS task_submissions")
+	db.Exec("DROP TABLE IF EXISTS tasks")
+
 	err := db.AutoMigrate(
 		&auth.User{},
 		&wallet.Wallet{},

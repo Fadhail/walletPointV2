@@ -6,6 +6,8 @@ import (
 	"wallet-point/internal/audit"
 	"wallet-point/utils"
 
+	"fmt"
+
 	"github.com/gin-gonic/gin"
 )
 
@@ -34,6 +36,12 @@ func (h *MarketplaceHandler) GetAll(c *gin.Context) {
 	status := c.Query("status")
 	page, _ := strconv.Atoi(c.DefaultQuery("page", "1"))
 	limit, _ := strconv.Atoi(c.DefaultQuery("limit", "20"))
+
+	// Security: If role is mahasiswa, force status to active
+	role, _ := c.Get("role")
+	if role == "mahasiswa" {
+		status = "active"
+	}
 
 	params := ProductListParams{
 		Status: status,
@@ -235,6 +243,17 @@ func (h *MarketplaceHandler) Purchase(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Purchase successful", txn)
+
+	// Log activity
+	h.auditService.LogActivity(audit.CreateAuditParams{
+		UserID:    userID,
+		Action:    "PURCHASE_PRODUCT",
+		Entity:    "MARKETPLACE_TRANSACTION",
+		EntityID:  txn.ID,
+		Details:   fmt.Sprintf("User purchased %d units of product ID %d", txn.Quantity, req.ProductID),
+		IPAddress: c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+	})
 }
 
 // GetTransactions handles getting all marketplace transactions

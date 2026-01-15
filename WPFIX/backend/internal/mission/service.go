@@ -1,6 +1,7 @@
 package mission
 
 import (
+	"encoding/json"
 	"errors"
 	"math"
 	"wallet-point/internal/wallet"
@@ -176,6 +177,11 @@ func (s *MissionService) SubmitMission(req *SubmitMissionRequest, studentID uint
 		Content:   req.Content,
 		FileURL:   req.FileURL,
 		Status:    "pending",
+	}
+
+	if len(req.Answers) > 0 {
+		answersBytes, _ := json.Marshal(req.Answers)
+		submission.Content = string(answersBytes)
 	}
 
 	if err := s.repo.CreateSubmission(submission); err != nil {

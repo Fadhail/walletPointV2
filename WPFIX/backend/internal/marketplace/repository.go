@@ -90,14 +90,20 @@ func (r *MarketplaceRepository) CreateTransaction(tx *gorm.DB, transaction *Mark
 }
 
 // GetAllTransactions retrieves marketplace transactions for admin
-func (r *MarketplaceRepository) GetAllTransactions(limit, offset int) ([]MarketplaceTransaction, int64, error) {
-	var transactions []MarketplaceTransaction
+func (r *MarketplaceRepository) GetAllTransactions(limit, offset int) ([]MarketplaceTransactionWithDetails, int64, error) {
+	var transactions []MarketplaceTransactionWithDetails
 	var total int64
 
-	if err := r.db.Model(&MarketplaceTransaction{}).Count(&total).Error; err != nil {
+	query := r.db.Table("marketplace_transactions mt").
+		Select("mt.*, p.name as product_name, u.full_name as user_name, u.email as user_email").
+		Joins("LEFT JOIN products p ON mt.product_id = p.id").
+		Joins("LEFT JOIN wallets w ON mt.wallet_id = w.id").
+		Joins("LEFT JOIN users u ON w.user_id = u.id")
+
+	if err := query.Count(&total).Error; err != nil {
 		return nil, 0, err
 	}
 
-	err := r.db.Limit(limit).Offset(offset).Order("created_at DESC").Find(&transactions).Error
+	err := query.Limit(limit).Offset(offset).Order("mt.created_at DESC").Scan(&transactions).Error
 	return transactions, total, err
 }

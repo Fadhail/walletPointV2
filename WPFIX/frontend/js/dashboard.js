@@ -14,11 +14,9 @@ document.addEventListener('DOMContentLoaded', async () => {
         // Update UI with User Info
         updateUserProfile(user);
 
-        // Render Navigation based on Role
+        // Initialize Navigation and View
         renderNavigation(user.role);
-
-        // Render Dashboard Content
-        renderDashboard(user);
+        handleNavigation('dashboard', user.role);
 
     } catch (error) {
         console.error('Dashboard Init Error:', error);
@@ -67,27 +65,24 @@ function renderNavigation(role) {
     const nav = document.getElementById('sidebarNav');
     let items = [];
 
-    // Common Items
-    items.push({ label: 'Ringkasan', href: '#dashboard', active: true });
-
     if (role === 'admin') {
         items.push(
-            { label: 'Pengguna', href: '#users' },
-            { label: 'Dompet', href: '#wallets' },
-            { label: 'Transaksi', href: '#transactions' },
-            { label: 'Transfer P2P', href: '#admin-transfers' },
-            { label: 'Marketplace', href: '#products' },
-            { label: 'Riwayat Penjualan', href: '#admin-sales' },
+            { label: 'Dashboard', href: '#dashboard', active: true },
+            { label: 'Data Pengguna', href: '#users' },
+            { label: 'Data Produk', href: '#products' },
             { label: 'Log Audit', href: '#audit-logs' }
         );
     } else if (role === 'dosen') {
         items.push(
+            { label: 'Dashboard', href: '#dashboard', active: true },
             { label: 'Buat Quis', href: '#quizzes' },
             { label: 'Buat Misi', href: '#missions' },
-            { label: 'Approval', href: '#submissions' }
+            { label: 'Approval', href: '#submissions' },
+            { label: 'Data Siswa', href: '#dosen-students' }
         );
     } else if (role === 'mahasiswa') {
         items.push(
+            { label: 'Dashboard', href: '#dashboard', active: true },
             { label: 'Misi', href: '#missions' },
             { label: 'MarketPlace', href: '#shop' },
             { label: 'Scan QR', href: '#transfer' },
@@ -95,7 +90,7 @@ function renderNavigation(role) {
         );
     } else if (role === 'merchant') {
         items.push(
-            { label: 'Dashboard', href: '#merchant-dashboard' },
+            { label: 'Dashboard', href: '#merchant-dashboard', active: true },
             { label: 'Kasir Scan', href: '#merchant-scanner' }
         );
     }
@@ -136,34 +131,27 @@ function handleNavigation(target, role) {
             case 'users':
                 AdminController.renderUsers();
                 break;
-            case 'wallets':
-                AdminController.renderWallets();
-                break;
-            case 'transactions':
-                AdminController.renderTransactions();
-                break;
-            case 'admin-transfers':
-                AdminController.renderTransfers();
-                break;
             case 'products':
                 AdminController.renderProducts();
                 break;
-            case 'admin-sales':
-                AdminController.renderMarketplaceSales();
-                break;
             case 'audit-logs':
                 AdminController.renderAuditLogs();
+                break;
+            case 'dashboard':
+                AdminController.renderDashboard();
                 break;
             case 'profile':
                 ProfileController.renderProfile();
                 break;
             default:
-                renderDashboard({ role: 'admin' });
-                title.textContent = 'Ringkasan Admin';
-                AdminController.loadDashboardStats();
+                AdminController.renderDashboard();
+                title.textContent = 'Dashboard Administrator';
         }
     } else if (role === 'dosen') {
         switch (target) {
+            case 'dashboard':
+                renderDashboard({ role: 'dosen' });
+                break;
             case 'quizzes':
                 DosenController.renderQuizzes();
                 break;
@@ -172,6 +160,9 @@ function handleNavigation(target, role) {
                 break;
             case 'submissions':
                 DosenController.renderSubmissions();
+                break;
+            case 'dosen-students':
+                DosenController.renderStudents();
                 break;
             case 'profile':
                 ProfileController.renderProfile();
@@ -182,6 +173,9 @@ function handleNavigation(target, role) {
         }
     } else if (role === 'mahasiswa') {
         switch (target) {
+            case 'dashboard':
+                renderDashboard({ role: 'mahasiswa' });
+                break;
             case 'missions':
                 MahasiswaController.renderMissions();
                 break;
@@ -351,7 +345,7 @@ async function loadStudentStats() {
         const submissions = await API.getSubmissions({ status: 'approved' });
 
         document.getElementById('userBalance').textContent = wallet.data.balance.toLocaleString();
-        document.getElementById('stats-missions-done').textContent = (submissions.data.submissions || []).filter(s => s.user_id === user.id).length;
+        document.getElementById('stats-missions-done').textContent = (submissions.data.submissions || []).filter(s => s.student_id === user.id).length;
         document.getElementById('stats-active-missions').textContent = (missions.data.missions || []).length;
     } catch (e) { console.error(e); }
 }

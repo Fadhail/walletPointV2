@@ -91,3 +91,12 @@ type TransactionListResponse struct {
 	Limit        int                      `json:"limit"`
 	TotalPages   int                      `json:"total_pages"`
 }
+
+type AdminStats struct {
+	TotalUsers        int64 `json:"total_users"`
+	ActiveUsers       int64 `json:"active_users"`
+	CirculationPoints int64 `json:"circulation_points"`
+	TodayTransactions int64 `json:"today_transactions"`
+	TodayCredits      int64 `json:"today_credits"`
+	TodayDebits       int64 `json:"today_debits"`
+}

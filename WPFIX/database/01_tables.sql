@@ -3,9 +3,9 @@
 -- Part 1: Table Definitions
 -- ==================================================
 
-DROP DATABASE IF EXISTS walletpoint_db;
-CREATE DATABASE walletpoint_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE walletpoint_db;
+DROP DATABASE IF EXISTS wallet_point;
+CREATE DATABASE wallet_point CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+USE wallet_point;
 
 -- 1. USERS
 CREATE TABLE users (

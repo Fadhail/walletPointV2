@@ -45,7 +45,7 @@ func (h *Handler) ListSources(c *gin.Context) {
 // @Success 200 {object} utils.Response
 // @Router /mahasiswa/external/sync [post]
 func (h *Handler) SyncPoints(c *gin.Context) {
-	userID, _ := c.Get("userID")
+	userID, _ := c.Get("user_id")
 
 	var req SyncRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
@@ -60,6 +60,17 @@ func (h *Handler) SyncPoints(c *gin.Context) {
 	}
 
 	utils.SuccessResponse(c, http.StatusOK, "Points synced successfully", log)
+
+	// Log activity
+	h.auditService.LogActivity(audit.CreateAuditParams{
+		UserID:    userID.(uint),
+		Action:    "EXTERNAL_SYNC",
+		Entity:    "EXTERNAL_LOG",
+		EntityID:  log.ID,
+		Details:   "User synced points from external source",
+		IPAddress: c.ClientIP(),
+		UserAgent: c.Request.UserAgent(),
+	})
 }
 
 // @Summary Add external source (Admin only)

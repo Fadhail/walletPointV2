@@ -10,6 +10,7 @@ import (
 	"wallet-point/internal/user"
 	"wallet-point/internal/wallet"
 	"wallet-point/middleware"
+	"wallet-point/utils"
 
 	"github.com/gin-gonic/gin"
 	"gorm.io/gorm"
@@ -19,9 +20,17 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 	// Apply global middleware
 	r.Use(middleware.CORS(allowedOrigins))
 	r.Use(middleware.Logger())
+	r.Use(middleware.SecurityHeaders())
+	r.Use(middleware.IPBasedRateLimiter())
+
+	// Publicly accessible uploaded files
+	r.Static("/uploads", "./uploads")
 
 	// API v1 group
 	api := r.Group("/api/v1")
+
+	// Global Upload Endpoint
+	api.POST("/upload", middleware.AuthMiddleware(), utils.HandleFileUpload)
 
 	// Initialize repositories
 	authRepo := auth.NewAuthRepository(db)
@@ -50,7 +59,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 	marketplaceHandler := marketplace.NewMarketplaceHandler(marketplaceService, auditService)
 	auditHandler := audit.NewAuditHandler(auditService)
 	missionHandler := mission.NewMissionHandler(missionService, auditService)
-	transferHandler := transfer.NewHandler(transferService)
+	transferHandler := transfer.NewHandler(transferService, auditService)
 	externalHandler := external.NewHandler(externalService, auditService) // Add this
 
 	// ========================================
@@ -58,7 +67,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 	// ========================================
 	authGroup := api.Group("/auth")
 	{
-		authGroup.POST("/login", authHandler.Login)
+		authGroup.POST("/login", middleware.AuthRateLimiter(), authHandler.Login)
 		authGroup.GET("/me", middleware.AuthMiddleware(), authHandler.Me)
 		authGroup.PUT("/profile", middleware.AuthMiddleware(), authHandler.UpdateProfile)
 		authGroup.PUT("/password", middleware.AuthMiddleware(), authHandler.UpdatePassword)
@@ -106,6 +115,9 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 		adminGroup.POST("/external/sources", externalHandler.RegisterSource)
 		adminGroup.POST("/external/products", externalHandler.RegisterProduct)
 		adminGroup.POST("/external/missions", externalHandler.RegisterMission)
+
+		// Admin Dashboard Stats
+		adminGroup.GET("/stats", walletHandler.GetAdminStats)
 	}
 
 	// ========================================
@@ -120,6 +132,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 		dosenGroup.PUT("/missions/:id", missionHandler.UpdateMission)
 		dosenGroup.DELETE("/missions/:id", missionHandler.DeleteMission)
 		dosenGroup.GET("/missions", missionHandler.GetAllMissions)
+		dosenGroup.GET("/missions/:id", missionHandler.GetMissionByID)
 
 		// Submission Validation
 		dosenGroup.GET("/submissions", missionHandler.GetAllSubmissions)
@@ -127,6 +140,10 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 
 		// Dashboard Stats
 		dosenGroup.GET("/stats", missionHandler.GetDosenStats)
+
+		// Monitoring & Manual Rewards
+		dosenGroup.GET("/students", userHandler.GetAll) // Reuse GetAll but restricted to Dosen
+		dosenGroup.POST("/reward", walletHandler.AdjustPoints)
 	}
 
 	// ========================================
@@ -145,6 +162,7 @@ func SetupRoutes(r *gin.Engine, db *gorm.DB, allowedOrigins string, jwtExpiry in
 		// Transfer Points
 		mahasiswaGroup.POST("/transfer", transferHandler.CreateTransfer)
 		mahasiswaGroup.GET("/transfer/history", transferHandler.GetMyTransfers)
+		mahasiswaGroup.GET("/transfer/recipient/:id", transferHandler.GetRecipientInfo)
 		mahasiswaGroup.GET("/transfer/sent", transferHandler.GetSentTransfers)
 		mahasiswaGroup.GET("/transfer/received", transferHandler.GetReceivedTransfers)
 

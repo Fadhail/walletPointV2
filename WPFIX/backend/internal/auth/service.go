@@ -21,23 +21,25 @@ func NewAuthService(repo *AuthRepository, jwtExpiry int) *AuthService {
 // Login authenticates user and returns JWT token
 func (s *AuthService) Login(email, password string) (*LoginResponse, error) {
 	// Find user by email
-	fmt.Printf("DEBUG: Searching for email: '%s'\n", email)
 	user, err := s.repo.FindByEmail(email)
 	if err != nil {
-		fmt.Printf("DEBUG: User not found: %v\n", err)
 		return nil, errors.New("invalid email or password")
 	}
-	fmt.Printf("DEBUG: User found: ID=%d, Role=%s, StoredHash='%s'\n", user.ID, user.Role, user.PasswordHash)
 
 	// Check if user is active
 	if user.Status != "active" {
 		return nil, errors.New("account is inactive or suspended")
 	}
 
-	// Verify password (plain text for testing)
-	if user.PasswordHash != password {
-		fmt.Printf("DEBUG LOGIN FAIL: DB='%s', Input='%s'\n", user.PasswordHash, password)
-		return nil, errors.New("invalid email or password")
+	// Verify password
+	err = utils.VerifyPassword(user.PasswordHash, password)
+	if err != nil {
+		// Fallback for legacy plain text passwords during migration/testing
+		if user.PasswordHash == password {
+			fmt.Printf("WARNING: User %s still using plain text password. Please update for security.\n", email)
+		} else {
+			return nil, errors.New("invalid email or password")
+		}
 	}
 
 	// Generate JWT token
@@ -79,13 +81,16 @@ func (s *AuthService) Register(req *RegisterRequest) (*User, error) {
 		return nil, errors.New("NIM/NIP already registered")
 	}
 
-	// Store password as plain text (for testing only)
-	// TODO: Enable hashing in production
+	// Hash password
+	hashedPassword, err := utils.HashPassword(req.Password)
+	if err != nil {
+		return nil, errors.New("failed to secure password")
+	}
 
 	// Create user
 	user := &User{
 		Email:        req.Email,
-		PasswordHash: req.Password,
+		PasswordHash: hashedPassword,
 		FullName:     req.FullName,
 		NimNip:       req.NimNip,
 		Role:         req.Role,
@@ -122,10 +127,20 @@ func (s *AuthService) UpdatePassword(userID uint, req *UpdatePasswordRequest) er
 		return err
 	}
 
-	// Verify old password (plain text for now)
-	if user.PasswordHash != req.OldPassword {
-		return errors.New("current password incorrect")
+	// Verify old password
+	err = utils.VerifyPassword(user.PasswordHash, req.OldPassword)
+	if err != nil {
+		// Fallback for legacy plain text
+		if user.PasswordHash != req.OldPassword {
+			return errors.New("current password incorrect")
+		}
 	}
 
-	return s.repo.UpdatePassword(userID, req.NewPassword)
+	// Hash new password
+	hashedPassword, err := utils.HashPassword(req.NewPassword)
+	if err != nil {
+		return errors.New("failed to secure new password")
+	}
+
+	return s.repo.UpdatePassword(userID, hashedPassword)
 }
