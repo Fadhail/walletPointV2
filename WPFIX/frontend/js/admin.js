@@ -371,14 +371,15 @@ class AdminController {
                     <table class="premium-table" id="productsTable">
                         <thead>
                             <tr>
-                                <th>Produk</th>
+                                <th>ID</th>
+                                <th>Gambar</th>
+                                <th>Nama Produk</th>
                                 <th>Harga</th>
                                 <th>Stok</th>
-                                <th>Status</th>
-                                <th class="text-right">Aksi</th>
+                                <th>Aksi</th>
                             </tr>
                         </thead>
-                        <tbody><tr><td colspan="5" class="text-center">Menghubungkan inventaris...</td></tr></tbody>
+                        <tbody><tr><td colspan="6" class="text-center">Belum ada produk.</td></tr></tbody>
                     </table>
                 </div>
             </div>
@@ -389,15 +390,24 @@ class AdminController {
             const products = result.data.products || [];
             const tbody = document.querySelector('#productsTable tbody');
 
+            if (products.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="text-center">Belum ada produk.</td></tr>';
+                return;
+            }
+
             tbody.innerHTML = products.map(p => `
                 <tr>
-                    <td><strong>${p.name}</strong></td>
-                    <td style="font-weight:800; color:var(--primary)">${p.price.toLocaleString()} pts</td>
-                    <td><strong>${p.stock}</strong> unit</td>
-                    <td><span class="badge ${p.status === 'active' ? 'status-active' : 'status-inactive'}">${p.status}</span></td>
-                    <td class="text-right">
-                        <button class="btn-icon" onclick="AdminController.showProductModal(${p.id})">✏️</button>
-                        <button class="btn-icon" style="color:var(--error)" onclick="AdminController.deleteProduct(${p.id})">🗑️</button>
+                    <td>#${p.id}</td>
+                    <td><div class="table-img" style="background-image: url('${p.image_url || 'assets/placeholder.jpg'}')"></div></td>
+                    <td>
+                        <div style="font-weight: 600;">${p.name}</div>
+                        <small style="color: var(--text-muted);">${p.category || 'Umum'}</small>
+                    </td>
+                    <td style="font-weight: 700; color: var(--primary);">${p.price.toLocaleString()}</td>
+                    <td>${p.stock} unit</td>
+                    <td>
+                        <button class="btn btn-sm" onclick="AdminController.showProductModal(${p.id})" style="margin-right:0.5rem;">✏️</button>
+                        <button class="btn btn-sm btn-danger" onclick="AdminController.deleteProduct(${p.id})">🗑️</button>
                     </td>
                 </tr>
             `).join('');
@@ -583,6 +593,7 @@ class AdminController {
         if (!confirm("Reset?")) return;
         try { await API.resetWallet(data); closeModal(); AdminController.renderUsers('wallets'); showToast('Selesai'); } catch (e) { showToast(e.message, 'error'); }
     }
+
 
     static async showProductModal(id = null) {
         let product = null;

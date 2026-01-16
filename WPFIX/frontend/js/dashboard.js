@@ -85,13 +85,12 @@ function renderNavigation(role) {
             { label: 'Dashboard', href: '#dashboard', active: true },
             { label: 'Misi', href: '#missions' },
             { label: 'MarketPlace', href: '#shop' },
-            { label: 'Scan QR', href: '#transfer' },
+            { label: 'Transfer Poin', href: '#transfer' },
             { label: 'Wallet', href: '#history' }
         );
     } else if (role === 'merchant') {
         items.push(
-            { label: 'Dashboard', href: '#merchant-dashboard', active: true },
-            { label: 'Kasir Scan', href: '#merchant-scanner' }
+            { label: 'Dashboard', href: '#merchant-dashboard', active: true }
         );
     }
 
@@ -328,9 +327,8 @@ function renderDashboard(user) {
 
             <div class="card fade-in" style="margin-top: 2rem; padding: 2.5rem; text-align: center; background: white; border: 1px solid var(--primary-light); border-radius:30px;">
                 <div style="font-size: 3rem; margin-bottom: 1rem;">🏧</div>
-                <h2 style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Terminal Kasir WalletPoint</h2>
-                <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">Gunakan fitur "Kasir Scan" di bilah sisi untuk memproses pembayaran mahasiswa menggunakan QR Code mereka.</p>
-                <button class="btn btn-primary" style="margin-top: 1.5rem; border-radius: 20px; padding: 1rem 2rem;" onclick="handleNavigation('merchant-scanner', 'merchant')">Mulai Scan QR 📷</button>
+                <h2 style="font-weight: 700; color: var(--text-main); margin-bottom: 0.5rem;">Dashboard Merchant WalletPoint</h2>
+                <p style="color: var(--text-muted); max-width: 500px; margin: 0 auto;">Selamat datang! Anda dapat melihat riwayat penjualan dan statistik toko Anda di sini.</p>
             </div>
         `;
         MerchantController.loadMerchantStats();
