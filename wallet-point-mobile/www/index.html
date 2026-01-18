@@ -4,11 +4,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self' data: gap: https://ssl.gstatic.com 'unsafe-eval' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; media-src *; img-src 'self' data: content:; connect-src *;">
     <title>Dashboard - Wallet Point</title>
     <!-- Modern System Font Stack (No External Dependencies) -->
 
     <link rel="stylesheet" href="css/style.css">
-    <script src="https://unpkg.com/html5-qrcode"></script>
+    <script src="js/html5-qrcode.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
 </head>
 
@@ -74,6 +76,7 @@
     </div>
 
     <!-- Scripts -->
+    <script src="cordova.js"></script>
     <script src="js/config.js"></script>
     <script src="js/api.js"></script>
     <script src="js/admin.js"></script>
