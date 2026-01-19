@@ -51,7 +51,7 @@ services:
       DB_HOST: db
       DB_PORT: 3306
       DB_USER: root
-      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_PASSWORD: '${MYSQL_PASSWORD}'
       DB_NAME: wallet_point
       JWT_SECRET: "H6RoFvCDVvlXU33SXXsi2anbRF/mafbH9O1+QWoulOULji6n8xtgiVXeorrSJTwr83LDVVX8wxYexICnyCyjpg=="
       JWT_EXPIRY_HOURS: 24
