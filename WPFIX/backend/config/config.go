@@ -50,10 +50,12 @@ func LoadConfig() *Config {
 		apiTimeout = 30
 	}
 
-	serverHost := getEnv("SERVER_HOST")
+	serverHost := getEnv("SERVER_HOST", "https://xeroon.my.id")
+	serverPort := getEnv("SERVER_PORT", "8102")
 
 	return &Config{
 		ServerHost:         serverHost,
+		ServerPort:			serverPort,
 		ServerAddress:      serverHost,
 		GinMode:            getEnv("GIN_MODE", "debug"),
 		DBHost:             getEnv("DB_HOST", "localhost"),
