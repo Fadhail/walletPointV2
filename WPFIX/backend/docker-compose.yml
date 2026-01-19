@@ -5,7 +5,7 @@ services:
     image: mysql:8.0
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: admin123
+      MYSQL_ROOT_PASSWORD: walletpoint11
       MYSQL_DATABASE: wallet_point
       MYSQL_USER: walletpoint
       MYSQL_PASSWORD: walletpoint11
@@ -27,7 +27,7 @@ services:
     environment:
       PMA_HOST: db
       PMA_PORT: 3306
-      PMA_USER: wallet_point
+      PMA_USER: walletpoint
       PMA_PASSWORD: walletpoint11
     ports:
       - "8087:80"
