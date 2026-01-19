@@ -30,7 +30,7 @@ services:
       PMA_USER: wallet_point
       PMA_PASSWORD: walletpoint11
     ports:
-      - "8084:80"
+      - "8087:80"
 
   backend:
     build:
