@@ -1,0 +1,64 @@
+version: '3.8'
+services:
+  db:
+    image: 'mysql:8.0'
+    container_name: wallet_point
+    environment:
+      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
+      MYSQL_DATABASE: wallet_point
+      MYSQL_USER: '${MYSQL_USER}'
+      MYSQL_PASSWORD: '${MYSQL_PASSWORD}'
+    ports:
+      - '3306:3306'
+    volumes:
+      - 'mysql_data:/var/lib/mysql'
+    healthcheck:
+      test:
+        - CMD
+        - mysqladmin
+        - ping
+        - '-h'
+        - localhost
+        - '-u'
+        - root
+        - '-p${MYSQL_ROOT_PASSWORD}'
+      interval: 10s
+      timeout: 5s
+      retries: 5
+  phpmyadmin:
+    image: 'phpmyadmin/phpmyadmin:latest'
+    container_name: skincare_phpmyadmin
+    environment:
+      PMA_HOST: db
+      PMA_PORT: 3306
+      PMA_USER: '${MYSQL_USER}'
+      PMA_PASSWORD: '${MYSQL_PASSWORD}'
+      MYSQL_ROOT_PASSWORD: '${MYSQL_ROOT_PASSWORD}'
+    ports:
+      - '8084:80'
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      SERVER_HOST: localhost
+      SERVER_PORT: 8102
+      GIN_MODE: debug
+      DB_HOST: db
+      DB_PORT: 3306
+      DB_USER: root
+      DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      DB_NAME: wallet_point
+      JWT_SECRET: "H6RoFvCDVvlXU33SXXsi2anbRF/mafbH9O1+QWoulOULji6n8xtgiVXeorrSJTwr83LDVVX8wxYexICnyCyjpg=="
+      JWT_EXPIRY_HOURS: 24
+      ALLOWED_ORIGINS: "*"
+      MAX_UPLOAD_SIZE: 10485760
+      UPLOAD_PATH: ./uploads
+      EXTERNAL_API_TIMEOUT: 30
+  
+volumes:
+  mysql_data: null
