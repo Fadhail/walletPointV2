@@ -54,7 +54,7 @@ func LoadConfig() *Config {
 
 	return &Config{
 		ServerHost:         serverHost,
-		ServerAddress:      serverHost
+		ServerAddress:      serverHost,
 		GinMode:            getEnv("GIN_MODE", "debug"),
 		DBHost:             getEnv("DB_HOST", "localhost"),
 		DBPort:             getEnv("DB_PORT", "3306"),
