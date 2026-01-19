@@ -3,7 +3,6 @@ package main
 import (
 	"log"
 	"wallet-point/config"
-	"wallet-point/internal/database"
 	"wallet-point/routes"
 	"wallet-point/utils"
 
