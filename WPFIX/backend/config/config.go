@@ -50,7 +50,7 @@ func LoadConfig() *Config {
 		apiTimeout = 30
 	}
 
-	serverHost := getEnv("SERVER_HOST",)
+	serverHost := getEnv("SERVER_HOST")
 
 	return &Config{
 		ServerHost:         serverHost,
