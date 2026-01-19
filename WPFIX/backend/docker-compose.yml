@@ -42,8 +42,7 @@ services:
         condition: service_healthy
     environment:
       GIN_MODE: debug
-      SERVER_HOST: 0.0.0.0
-      SERVER_PORT: 8102
+      SERVER_HOST: xeroon.my.id
 
       DB_HOST: db
       DB_PORT: 3306

@@ -50,13 +50,11 @@ func LoadConfig() *Config {
 		apiTimeout = 30
 	}
 
-	serverHost := getEnv("SERVER_HOST", "localhost")
-	serverPort := getEnv("SERVER_PORT", "8102")
+	serverHost := getEnv("SERVER_HOST",)
 
 	return &Config{
 		ServerHost:         serverHost,
-		ServerPort:         serverPort,
-		ServerAddress:      serverHost + ":" + serverPort,
+		ServerAddress:      serverHost
 		GinMode:            getEnv("GIN_MODE", "debug"),
 		DBHost:             getEnv("DB_HOST", "localhost"),
 		DBPort:             getEnv("DB_PORT", "3306"),
